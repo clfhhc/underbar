@@ -54,8 +54,8 @@
       }
     } else {
       //collection is object
-      for (let i=0;i<Object.keys(collection).length;i++) {
-        iterator(collection[Object.keys(collection)[i]],Object.keys(collection)[i],collection)
+      for (let key in collection) {
+        iterator(collection[key],key,collection)
       }
     }
   };
@@ -94,7 +94,7 @@
   _.reject = function(collection, test) {
     // TIP: see if you can re-use _.filter() here, without simply
     // copying code in and modifying it
-    var test2=(item,index)=>test(item,index)===false;
+    var test2=(item,index)=>!test(item,index);
 
     return _.filter(collection,test2);
   };
@@ -102,11 +102,11 @@
   // Produce a duplicate-free version of the array.
   _.uniq = function(array, isSorted, iterator) {
     var result=[];
-    var result2=[];
+    var uniqueObj={};
     _.each(array,function(item){
       if (iterator) {
-        if (!result2.includes(iterator(item))) {
-          result2.push(iterator(item));
+        if (!uniqueObj.hasOwnProperty(iterator(item))) {
+          uniqueObj[iterator(item)]=item;
           result.push(item);
         }
       } else {
@@ -123,8 +123,8 @@
     // like each(), but in addition to running the operation on all
     // the members, it also maintains an array of results.
     var result=[];
-    _.each(collection,function(item,index){
-      result.push(iterator(item,index));
+    _.each(collection,function(value,key,collection){
+      result.push(iterator(value,key,collection));
     });
     return result;
   };
@@ -224,28 +224,26 @@
   //     bla: "even more stuff"
   //   }); // obj1 now contains key1, key2, key3 and bla
   _.extend = function(obj) {
-    for (let i=0;i<arguments.length;i++) {
-      if (i!==0) {
-        for (let key of Object.keys(arguments[i])) {
-          obj[key]=arguments[i][key];
-        }
-      }
-    }
+   _.each(arguments,(argumentObj,index)=>{
+     if (index!==0) {
+      _.each(argumentObj,(value,key)=>{
+        obj[key]=value;
+      });
+     }
+   });
     return obj;
   };
 
   // Like extend, but doesn't ever overwrite a key that already
   // exists in obj
   _.defaults = function(obj) {
-    for (let i=0;i<arguments.length;i++) {
-      if (i!==0) {
-        for (let key of Object.keys(arguments[i])) {
-          if (!obj.hasOwnProperty(key)) {
-            obj[key]=arguments[i][key];
-          }
-        }
-      }
+   _.each(arguments,(argumentObj,index)=>{
+    if (index!==0) {
+     _.each(argumentObj,(value,key)=>{
+       !obj.hasOwnProperty(key) && (obj[key]=value);
+     });
     }
+  });
     return obj;
   };
 
@@ -291,16 +289,11 @@
   // instead if possible.
   _.memoize = function(func) {
     var storedResult={};
-    var result;
 
     return function() {
-      if (storedResult.hasOwnProperty(JSON.stringify(arguments))) {
-        result = storedResult[JSON.stringify(arguments)]
-      } else {
-        result=func.apply(this,arguments);
-        storedResult[JSON.stringify(arguments)]=result;
-      }
-      return result;
+      var arg=JSON.stringify(arguments);
+        !storedResult.hasOwnProperty(arg) && (storedResult[arg]=func.apply(this,arguments));
+      return storedResult[arg];
     }
   };
 
